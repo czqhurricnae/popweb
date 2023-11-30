@@ -79,11 +79,11 @@
                                                                         (file-name-directory load-file-name)
                                                                       default-directory)))
 
-(defcustom popweb-anki-review-popup-window-width-scale 0.8
+(defcustom popweb-anki-review-popup-window-width-scale 1
   "The popup window's width scale of Emacs's."
   :type '(float))
 
-(defcustom popweb-anki-review-popup-window-height-scale 0.5
+(defcustom popweb-anki-review-popup-window-height-scale 1
   "The popup window's height scale of Emacs's."
   :type '(float))
 
@@ -110,7 +110,7 @@
   :type 'string
   :group 'popweb-anki-review)
 
-(setq popweb-anki-review-index-path (concat (file-name-directory load-file-name) "index.html"))
+(setq popweb-anki-review-index-file-path (concat (file-name-directory load-file-name) "index.html"))
 (setq popweb-anki-review-module-path (concat (file-name-directory load-file-name) "popweb-anki-review.py"))
 
 (defun popweb-anki-review--sentence ()
@@ -195,7 +195,7 @@ Otherwise return sentence around point."
                        (list
                         popweb-anki-review-module-path
                         "anki_review"
-                        popweb-anki-review-index-path
+                        popweb-anki-review-index-file-path
                         x y x-offset y-offset
                         frame-x frame-y frame-w frame-h
                         popweb-anki-review-popup-window-width-scale
@@ -208,18 +208,16 @@ Otherwise return sentence around point."
 (defun popweb-anki-review-preview-window-can-hide ()
   (run-with-timer 1 nil (lambda () (setq popweb-anki-review-preview-window-visible-p t))))
 
-(defun popweb-anki-review-show (&optional arg)
-  (interactive "P")
+(defun popweb-anki-review-show (&optional start-sentence arg)
 
-  (setq popweb-anki-review-sentence (if (or mark-active arg) (or (popweb-anki-review-region-or-sentence) "") ""))
+  (interactive (list (read-string (format "[popweb-anki-review] To show(%s): " (or (popweb-anki-review-region-or-sentence) ""))
+                                  (popweb-anki-review-region-or-sentence)) "P"))
 
-  (while (string-equal popweb-anki-review-sentence "")
-    (setq popweb-anki-review-sentence (read-string "Please input the word or sentence to review: "
+  (while (string-equal start-sentence "")
+    (setq start-sentence (read-string "Please input the word or sentence to review: "
                                                    nil nil "" nil)))
 
-  (setq popweb-anki-review-sentence (replace-regexp-in-string "[\t\n\r]+" " " popweb-anki-review-sentence))
-
-  (message "[popweb-anki-review] to review: '%s'" popweb-anki-review-sentence)
+  (setq popweb-anki-review-sentence start-sentence)
 
   (if popweb-anki-review-sentence
     (progn

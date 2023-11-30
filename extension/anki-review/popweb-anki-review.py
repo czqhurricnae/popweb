@@ -7,7 +7,23 @@ import os
 import json
 import urllib.request
 import re
+import requests
+from PyDeepLX import PyDeepLX
 
+
+def popweb_translate_select(sentence):
+    deeplx_api = "http://127.0.0.1:1188/translate"
+    data = {
+        "text": sentence,
+        "source_lang": "EN",
+        "target_lang": "ZH"
+    }
+    post_data = json.dumps(data)
+    try:
+        translation = PyDeepLX.translate(text=sentence, sourceLang="EN", targetLang="ZH", numberAlternative=0, printResult=False)
+    except:
+        translation = json.loads(requests.post(url = deeplx_api, data=post_data).text)["data"]
+    return translation
 
 def get_tooltip_script(script_file) -> str:
     ''' Read content of JavaScript(js) files.'''
@@ -190,6 +206,9 @@ def get_tooltip_script(script_file) -> str:
             #anki-review {{
                 font-size: 3.6rem;
             }}
+            #translation {{
+                font-size: 3.6rem;
+            }}
         </style>
         <script type='text/javascript'>
             window.REV_SEARCH_MAX_QUERY_LENGTH = 300;
@@ -269,7 +288,15 @@ class CallHandler(QObject):
 
         elif cmd.startswith("rev-tt-dictionary "):
             query = cmd.split()[1:]
-            self.web_window.eval_in_emacs(self.eval_in_emacs_func, query)
+            self.web_window.eval_in_emacs(self.eval_in_emacs_func, [" ".join(query)])
+
+        elif cmd.startswith("rev-tt-silver "):
+            query = cmd.split()[1:]
+            self.web_window.eval_in_emacs("hurricane//popweb-silver-dict-query", [" ".join(query)])
+
+        elif cmd.startswith("rev-tt-tts "):
+            query = cmd.split()[1:]
+            self.web_window.eval_in_emacs("emacs-azure-tts", [" ".join(query)])
 
 def pop_anki_review_window(popweb, module_path, module_name, index_file, x, y,
                            x_offset, y_offset, frame_x, frame_y, frame_w, frame_h,
@@ -294,9 +321,12 @@ def pop_anki_review_window(popweb, module_path, module_name, index_file, x, y,
                                                   frame_x, frame_y,
                                                   frame_w, frame_h)
 
+    translation = popweb_translate_select(emacs_query)
+
     index_html = open(index_file, "r").read().replace(
-        "QUERY_PLACEHOLD", emacs_query).replace(
-            "HEAD-PLACEHOLD", get_tooltip_script(script_file))
+        "QUERY-PLACEHOLD", emacs_query).replace(
+            "TRANSLATION-PLACEHOLD", translation).replace(
+                "HEAD-PLACEHOLD", get_tooltip_script(script_file))
     web_window.webview.setHtml(index_html, QUrl("file://"))
     web_window.loading_js_code = ""
 
