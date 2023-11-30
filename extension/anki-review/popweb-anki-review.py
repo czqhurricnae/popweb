@@ -8,22 +8,22 @@ import json
 import urllib.request
 import re
 import requests
-from PyDeepLX import PyDeepLX
+from openai import OpenAI
 
 
 def popweb_translate_select(sentence):
-    deeplx_api = "http://127.0.0.1:1188/translate"
-    data = {
-        "text": sentence,
-        "source_lang": "EN",
-        "target_lang": "ZH"
-    }
-    post_data = json.dumps(data)
-    try:
-        translation = PyDeepLX.translate(text=sentence, sourceLang="EN", targetLang="ZH", numberAlternative=0, printResult=False)
-    except:
-        translation = json.loads(requests.post(url = deeplx_api, data=post_data).text)["data"]
-    return translation
+    client = OpenAI(api_key=get_emacs_var("gt-chatgpt-key"), base_url="https://api.deepseek.com")
+
+    response = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant"},
+            {"role": "user", "content": "Hello"},
+        ],
+        stream=False
+    )
+
+    return response.choices[0].message.content
 
 def get_tooltip_script(script_file) -> str:
     ''' Read content of JavaScript(js) files.'''
@@ -303,7 +303,7 @@ def pop_anki_review_window(popweb, module_path, module_name, index_file, x, y,
                            width_scale, height_scale, show_window,
                            script_file, media_directory,
                            new_query_p, emacs_query,
-                           eval_in_emacs_func):
+                           translation, eval_in_emacs_func):
 
     web_window = popweb.get_web_window(module_name)
 
@@ -321,7 +321,8 @@ def pop_anki_review_window(popweb, module_path, module_name, index_file, x, y,
                                                   frame_x, frame_y,
                                                   frame_w, frame_h)
 
-    translation = popweb_translate_select(emacs_query)
+    if not translation:
+        translation = popweb_translate_select(emacs_query)
 
     index_html = open(index_file, "r").read().replace(
         "QUERY-PLACEHOLD", emacs_query).replace(

@@ -82,6 +82,10 @@
 (defvar popweb-org-roam-link-preview-window-visible-p nil
   "Non-nil if popweb-org-roam-link popup is at the foreground.")
 
+(defvar popweb-org-roam-link-preview-tooltip-file (expand-file-name "tooltip.js" (if load-file-name
+                                                                           (file-name-directory load-file-name)
+                                                                         default-directory)))
+
 (defvar org-roam-node-ivy-read-result nil)
 
 (defcustom popweb-org-roam-link-popup-window-width-scale 0.8
@@ -92,7 +96,16 @@
   "The popup window's height scale of Emacs's"
   :type '(float))
 
+(defcustom popweb-org-roam-link-preview-media-directory nil
+  "Anki media directory."
+  :type '(string))
+
+(defcustom popweb-org-roam-link-preview-callback nil
+  "Customize callback function."
+  :type '(string))
+
 (setq popweb-org-roam-link-module-path (concat (file-name-directory load-file-name) "popweb-org-roam-link.py"))
+(setq popweb-org-roam-link-preview-index-file-path (concat (file-name-directory load-file-name) "index.html"))
 
 (defun get-org-context-at-point ()
   (save-excursion
@@ -194,7 +207,8 @@
 
 (defun get-html-from-org-context (context)
   (if (not (string-empty-p context))
-      (let ((org-export-before-processing-hook '(org-blackfriday--reset-org-blackfriday--code-block-num-backticks))) (org-export-string-as context 'html))
+      (let ((org-export-before-processing-hook '(org-blackfriday--reset-org-blackfriday--code-block-num-backticks)))
+        (org-export-string-as context 'html t))
     (progn
       (user-error "%s" "Nothing to preview or this kind of link is not supported yet!")
       nil)))
@@ -212,8 +226,12 @@
          (frame-h (frame-outer-height))
          (show-window (nth 0 info))
          (html-string (nth 1 info))
+         (script-file popweb-org-roam-link-preview-tooltip-file)
+         (media-directory popweb-org-roam-link-preview-media-directory)
+         (callback popweb-org-roam-link-preview-callback)
          (ivy-action-x (nth 2 info))
-         (new-html (not (string= html-string popweb-org-roam-link-preview--previous-html))))
+         (translation (or (nth 3 info) ""))
+         (new-html-p (not (string= html-string popweb-org-roam-link-preview--previous-html))))
     (cond ((and ivy-action-x (listp ivy-action-x))
            (setq popweb-org-roam-link-index-path (concat "file:" (file-name-directory (org-roam-node-file (cdr ivy-action-x))))))
           (t
@@ -221,19 +239,23 @@
     (popweb-call-async "call_module_method" popweb-org-roam-link-module-path
                        "pop_org_roam_link_window"
                        (list
+                        popweb-org-roam-link-module-path
                         "org_roam"
+                        popweb-org-roam-link-preview-index-file-path
                         popweb-org-roam-link-index-path
                         x y x-offset y-offset
                         frame-x frame-y frame-w frame-h
                         popweb-org-roam-link-popup-window-width-scale
                         popweb-org-roam-link-popup-window-height-scale
-                        show-window new-html html-string))
+                        show-window script-file media-directory
+                        new-html-p html-string translation
+                        callback))
     (popweb-org-roam-link-preview-window-can-hide)))
 
 (defun popweb-org-roam-link-preview-window-can-hide ()
   (run-with-timer 1 nil (lambda () (setq popweb-org-roam-link-preview-window-visible-p t))))
 
-(defun popweb-org-roam-link-show (&optional context ivy-action-x)
+(defun popweb-org-roam-link-show (&optional context ivy-action-x translation)
   (interactive)
   (let* ((context-string (or context (get-org-context-at-point)))
          (html-string (get-html-from-org-context context-string)))
@@ -246,8 +268,8 @@
                     (setq popweb-org-roam-link-preview-window-visible-p nil)
                     (ignore-errors
                       (popweb-call-async "hide_web_window" "org_roam"))))
-              (popweb-start 'popweb-org-roam-link-preview (list t html-string ivy-action-x))))
-      (popweb-start 'popweb-org-roam-link-preview (list nil "Hello world" ivy-action-x))))
+              (popweb-start 'popweb-org-roam-link-preview (list t html-string ivy-action-x translation))))
+      (popweb-start 'popweb-org-roam-link-preview (list nil "Hello world" ivy-action-x translation))))
   (add-hook 'post-command-hook #'popweb-org-roam-link-preview-window-hide-after-move))
 
 (defun org-roam-node--ivy-read-1 (&optional prompt initial-input filter-fn sort-fn require-match action caller)

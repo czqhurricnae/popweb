@@ -169,8 +169,10 @@
 If `mark-active' on, return region string.
 Otherwise return sentence around point."
   (if mark-active
-      (buffer-substring-no-properties (region-beginning)
-                                      (region-end))
+      (if (derived-mode-p 'pdf-view-mode)
+          (car (pdf-view-active-region-text))
+        (buffer-substring-no-properties (region-beginning)
+                                        (region-end)))
     (popweb-anki-review--sentence)))
 
 (defun popweb-anki-review-preview (info)
@@ -186,6 +188,7 @@ Otherwise return sentence around point."
          (frame-h (frame-outer-height))
          (show-window (nth 0 info))
          (emacs-query (nth 1 info))
+         (translation (nth 2 info))
          (script-file popweb-anki-review-tooltip-file)
          (media-directory popweb-anki-review-media-directory)
          (callback popweb-anki-review-callback)
@@ -201,7 +204,7 @@ Otherwise return sentence around point."
                         popweb-anki-review-popup-window-width-scale
                         popweb-anki-review-popup-window-height-scale
                         show-window script-file media-directory
-                        new-query-p emacs-query
+                        new-query-p emacs-query translation
                         callback))
     (popweb-anki-review-preview-window-can-hide)))
 
@@ -220,15 +223,15 @@ Otherwise return sentence around point."
   (setq popweb-anki-review-sentence start-sentence)
 
   (if popweb-anki-review-sentence
-    (progn
-      (setq popweb-anki-review-preview--previous-query popweb-anki-review-sentence)
-      (if popweb-anki-review-preview-window-visible-p
-          (progn
-            (setq popweb-anki-review-preview-window-visible-p nil)
-            (ignore-errors
-                      (popweb-call-async "hide_web_window" "anki_review"))))
-              (popweb-start 'popweb-anki-review-preview (list t popweb-anki-review-sentence)))
-      (popweb-start 'popweb-anki-review-preview (list nil "Hello world")))
+      (progn
+        (setq popweb-anki-review-preview--previous-query popweb-anki-review-sentence)
+        (if popweb-anki-review-preview-window-visible-p
+            (progn
+              (setq popweb-anki-review-preview-window-visible-p nil)
+              (ignore-errors
+                (popweb-call-async "hide_web_window" "anki_review"))))
+        (popweb-start 'popweb-anki-review-preview (list t (org-export-string-as popweb-anki-review-sentence anki-editor--ox-anki-html-backend t anki-editor--ox-export-ext-plist))))
+      (popweb-start 'popweb-anki-review-preview (list nil "Hello world" "test")))
   (add-hook 'post-command-hook #'popweb-anki-review-preview-window-hide-after-move))
 
 (defun popweb-anki-review-preview-window-hide-after-move ()
