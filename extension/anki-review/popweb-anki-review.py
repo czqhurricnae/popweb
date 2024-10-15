@@ -17,8 +17,8 @@ def popweb_translate_select(sentence):
     response = client.chat.completions.create(
         model="deepseek-chat",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant"},
-            {"role": "user", "content": "Hello"},
+            {"role": "system", "content": "You are a translation assistant"},
+            {"role": "user", "content": "Translate the following text to Chinese, return the returned in HTML format, do not wrap the returned text with ```, the original text is as follows:{}".format(sentence)},
         ],
         stream=False
     )

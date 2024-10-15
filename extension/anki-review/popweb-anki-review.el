@@ -212,7 +212,6 @@ Otherwise return sentence around point."
   (run-with-timer 1 nil (lambda () (setq popweb-anki-review-preview-window-visible-p t))))
 
 (defun popweb-anki-review-show (&optional start-sentence arg)
-
   (interactive (list (read-string (format "[popweb-anki-review] To show(%s): " (or (popweb-anki-review-region-or-sentence) ""))
                                   (popweb-anki-review-region-or-sentence)) "P"))
 
@@ -230,7 +229,7 @@ Otherwise return sentence around point."
               (setq popweb-anki-review-preview-window-visible-p nil)
               (ignore-errors
                 (popweb-call-async "hide_web_window" "anki_review"))))
-        (popweb-start 'popweb-anki-review-preview (list t (org-export-string-as popweb-anki-review-sentence anki-editor--ox-anki-html-backend t anki-editor--ox-export-ext-plist))))
+        (popweb-start 'popweb-anki-review-preview (list t popweb-anki-review-sentence nil)))
       (popweb-start 'popweb-anki-review-preview (list nil "Hello world" "test")))
   (add-hook 'post-command-hook #'popweb-anki-review-preview-window-hide-after-move))
 
